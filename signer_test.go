@@ -12,7 +12,7 @@ func fixedTime() time.Time {
 }
 
 func TestSigner(t *testing.T) {
-	signer, _ := New("foo", "bar", "", fixedTime)
+	signer, _ := NewWithPrefixAndNowFunc("foo", "bar", "", fixedTime)
 	req, _ := http.NewRequest("GET", "https://example.com/path", nil)
 
 	signer.SignRequest(req)
@@ -31,7 +31,7 @@ func TestSigner(t *testing.T) {
 }
 
 func TestValidator(t *testing.T) {
-	signer, _ := New("foo", "bar", "", fixedTime)
+	signer, _ := NewWithPrefixAndNowFunc("foo", "bar", "", fixedTime)
 	req, _ := http.NewRequest("GET", "https://example.com/path", nil)
 
 	signer.SignRequest(req)
