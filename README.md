@@ -8,7 +8,7 @@ You can sign a http.Request instances
 ```go
 
 import (
-  "github.com/hsdp/go-signer"
+  "github.com/philips-software/go-hsdp-signer"
   "net/http"
 )
 

@@ -8,4 +8,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial implementation
 
-[v1.0.0]: https://github.com/hsdp/go-signer/v1.0.0...HEAD
+[v1.0.0]: https://github.com/philips-software/go-hsdp-signer/v1.0.0...HEAD
