@@ -1,3 +1,5 @@
+[![Slack](https://philips-software-slackin.now.sh/badge.svg)](https://philips-software-slackin.now.sh)
+
 # Go HSDP Signer
 
 This package implements the HSDP API signing algorithm.
