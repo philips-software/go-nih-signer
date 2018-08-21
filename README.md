@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.com/philips-software/go-hsdp-signer.svg?branch=master)](https://travis-ci.com/philips-software/go-hsdp-signer)
+[![Maintainability](https://api.codeclimate.com/v1/badges/d30d55adc190015a63a6/maintainability)](https://codeclimate.com/github/philips-software/go-hsdp-signer/maintainability)
 [![Slack](https://philips-software-slackin.now.sh/badge.svg)](https://philips-software-slackin.now.sh)
 
 # Go HSDP Signer
