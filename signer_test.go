@@ -2,6 +2,7 @@ package signer
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -44,10 +45,16 @@ func TestValidator(t *testing.T) {
 		t.Errorf("Validation failed: %s", err)
 	}
 
-	badSigner, _ := New("fooz", "baz")
+	badSigner, _ := New("foo", "baz")
 	badSigner.SignRequest(req)
 	valid, err = signer.ValidateRequest(req)
-	if valid {
+	if err != ErrInvalidSignature {
+		t.Errorf("Expected validation to fail: %s", err)
+	}
+	badCreds, _ := New("fooz", "bar")
+	badCreds.SignRequest(req)
+	valid, err = signer.ValidateRequest(req)
+	if err != ErrInvalidCredential {
 		t.Errorf("Expected validation to fail: %s", err)
 	}
 
@@ -60,4 +67,17 @@ func TestValidator(t *testing.T) {
 	if err != ErrSignatureExpired {
 		t.Errorf("Expected ErrSignatureExpired")
 	}
+
+	signer.SignRequest(req)
+	authSig := req.Header.Get(AUTHORIZATION_HEADER)
+	req.Header.Set(AUTHORIZATION_HEADER, strings.Replace(authSig, ALGORITHM_NAME, "BogusAlg", 1))
+	valid, err = signer.ValidateRequest(req)
+	if valid {
+		t.Errorf("Expected validation to fail")
+	}
+	if err != ErrInvalidSignature {
+		t.Errorf("Expected ErrInvalidSignature: %v", err)
+	}
+	req.Header.Set(AUTHORIZATION_HEADER, authSig)
+
 }

@@ -21,7 +21,6 @@ var (
 	ALGORITHM_NAME       = "HmacSHA256"
 	ErrSignatureExpired  = errors.New("signture expired")
 	ErrInvalidSignature  = errors.New("invalid signature")
-	ErrInvalidHeaderList = errors.New("invalid header list")
 	ErrInvalidCredential = errors.New("invalid credential")
 	ErrNotSupportedYet   = errors.New("missing implementation, please contact the author(s)")
 )
@@ -99,9 +98,6 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 	}
 
 	headers := strings.Split(strings.TrimPrefix(comps[2], "SignedHeaders:"), ",")
-	if len(headers) < 1 {
-		return false, ErrInvalidHeaderList
-	}
 	currentSeed := []byte("")
 	currentKey := []byte("")
 	for _, h := range headers {
@@ -129,12 +125,9 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 		return false, ErrInvalidSignature
 	}
 
-	signed, err := time.Parse(TIME_FORMAT, signedDate)
-	if err != nil {
-		return false, err
-	}
 	now := s.nowFunc()
-	if now.Sub(signed).Seconds() > 900 {
+	signed, err := time.Parse(TIME_FORMAT, signedDate)
+	if err != nil || now.Sub(signed).Seconds() > 900 {
 		return false, ErrSignatureExpired
 	}
 	return true, nil
