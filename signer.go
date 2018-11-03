@@ -19,12 +19,12 @@ var (
 	SIGNED_DATE_HEADER   = "SignedDate"
 	DEFAULT_PREFIX_64    = "REhQV1M="
 	ALGORITHM_NAME       = "HmacSHA256"
-	errSignatureExpired  = errors.New("signture expired")
-	errInvalidSignature  = errors.New("invalid signature")
-	errInvalidAlgorithm  = errors.New("invalid algorithm")
-	errInvalidHeaderList = errors.New("invalid header list")
-	errInvalidCredential = errors.New("invalid credential")
-	errNotSupportedYet   = errors.New("missing implementation, please contact the author(s)")
+	ErrSignatureExpired  = errors.New("signture expired")
+	ErrInvalidSignature  = errors.New("invalid signature")
+	ErrInvalidAlgorithm  = errors.New("invalid algorithm")
+	ErrInvalidHeaderList = errors.New("invalid header list")
+	ErrInvalidCredential = errors.New("invalid credential")
+	ErrNotSupportedYet   = errors.New("missing implementation, please contact the author(s)")
 )
 
 // Signer holds the configuration of a signer instance
@@ -92,19 +92,19 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 
 	comps := strings.Split(signature, ";")
 	if len(comps) != 4 {
-		return false, errInvalidSignature
+		return false, ErrInvalidSignature
 	}
 	if comps[0] != ALGORITHM_NAME {
-		return false, errInvalidAlgorithm
+		return false, ErrInvalidAlgorithm
 	}
 	credential := strings.TrimPrefix(comps[1], "Credential:")
 	if credential != s.sharedKey {
-		return false, errInvalidCredential
+		return false, ErrInvalidCredential
 	}
 
 	headers := strings.Split(strings.TrimPrefix(comps[2], "SignedHeaders:"), ",")
 	if len(headers) < 1 {
-		return false, errInvalidHeaderList
+		return false, ErrInvalidHeaderList
 	}
 	currentSeed := []byte("")
 	currentKey := []byte("")
@@ -115,11 +115,11 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 		}
 		switch h {
 		case "body":
-			return false, errNotSupportedYet
+			return false, ErrNotSupportedYet
 		case "method":
-			return false, errNotSupportedYet
+			return false, ErrNotSupportedYet
 		case "URI":
-			return false, errNotSupportedYet
+			return false, ErrNotSupportedYet
 		default:
 			currentSeed = []byte(request.Header.Get(h))
 		}
@@ -134,7 +134,7 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 	receivedSignature := strings.TrimPrefix(comps[3], "Signature:")
 
 	if signature != receivedSignature {
-		return false, errInvalidSignature
+		return false, ErrInvalidSignature
 	}
 
 	signed, err := time.Parse(TIME_FORMAT, signedDate)
@@ -143,7 +143,7 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 	}
 	now := s.nowFunc()
 	if now.Sub(signed).Seconds() > 900 {
-		return false, errSignatureExpired
+		return false, ErrSignatureExpired
 	}
 	return true, nil
 }
