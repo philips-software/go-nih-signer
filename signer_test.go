@@ -1,7 +1,6 @@
 package signer
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -9,6 +8,10 @@ import (
 
 func fixedTime() time.Time {
 	return time.Date(2018, 10, 1, 0, 0, 0, 0, time.UTC)
+}
+
+func expiredTime() time.Time {
+	return fixedTime().Add(-time.Duration(3 * time.Hour))
 }
 
 func TestSigner(t *testing.T) {
@@ -23,10 +26,10 @@ func TestSigner(t *testing.T) {
 	nowFormatted := fixedTime().UTC().Format(TIME_FORMAT)
 
 	if signedDate != nowFormatted {
-		t.Error(fmt.Sprintf("Signature mismatch: %s != %s", signedDate, nowFormatted))
+		t.Errorf("Signature mismatch: %s != %s", signedDate, nowFormatted)
 	}
 	if signature != "HmacSHA256;Credential:foo;SignedHeaders:SignedDate;Signature:mws6Zf5yd8e2dhiCR0fMVyaisvLliNNqnCWpyy1am08=" {
-		t.Error(fmt.Sprintf("Invalid signture: %s", signature))
+		t.Errorf("Invalid signture: %s", signature)
 	}
 }
 
@@ -38,6 +41,23 @@ func TestValidator(t *testing.T) {
 
 	valid, err := signer.ValidateRequest(req)
 	if !valid {
-		t.Error(fmt.Sprintf("Validation failed: %s", err))
+		t.Errorf("Validation failed: %s", err)
+	}
+
+	badSigner, _ := New("fooz", "baz")
+	badSigner.SignRequest(req)
+	valid, err = signer.ValidateRequest(req)
+	if valid {
+		t.Errorf("Expected validation to fail: %s", err)
+	}
+
+	expiredSigner, _ := NewWithPrefixAndNowFunc("foo", "bar", "", expiredTime)
+	expiredSigner.SignRequest(req)
+	valid, err = signer.ValidateRequest(req)
+	if valid {
+		t.Errorf("Expected validation to fail: %s", err)
+	}
+	if err != ErrSignatureExpired {
+		t.Errorf("Expected ErrSignatureExpired")
 	}
 }
