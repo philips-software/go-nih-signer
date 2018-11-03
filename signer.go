@@ -21,7 +21,6 @@ var (
 	ALGORITHM_NAME       = "HmacSHA256"
 	ErrSignatureExpired  = errors.New("signture expired")
 	ErrInvalidSignature  = errors.New("invalid signature")
-	ErrInvalidAlgorithm  = errors.New("invalid algorithm")
 	ErrInvalidHeaderList = errors.New("invalid header list")
 	ErrInvalidCredential = errors.New("invalid credential")
 	ErrNotSupportedYet   = errors.New("missing implementation, please contact the author(s)")
@@ -91,11 +90,8 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 	signedDate := request.Header.Get(SIGNED_DATE_HEADER)
 
 	comps := strings.Split(signature, ";")
-	if len(comps) != 4 {
+	if len(comps) < 4 || comps[0] != ALGORITHM_NAME {
 		return false, ErrInvalidSignature
-	}
-	if comps[0] != ALGORITHM_NAME {
-		return false, ErrInvalidAlgorithm
 	}
 	credential := strings.TrimPrefix(comps[1], "Credential:")
 	if credential != s.sharedKey {
@@ -114,11 +110,7 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 			continue
 		}
 		switch h {
-		case "body":
-			return false, ErrNotSupportedYet
-		case "method":
-			return false, ErrNotSupportedYet
-		case "URI":
+		case "body", "method", "URI":
 			return false, ErrNotSupportedYet
 		default:
 			currentSeed = []byte(request.Header.Get(h))
