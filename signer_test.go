@@ -21,10 +21,10 @@ func TestSigner(t *testing.T) {
 
 	signer.SignRequest(req)
 
-	signedDate := req.Header.Get(SIGNED_DATE_HEADER)
-	signature := req.Header.Get(AUTHORIZATION_HEADER)
+	signedDate := req.Header.Get(HeaderSignedDate)
+	signature := req.Header.Get(HeaderAuthorization)
 
-	nowFormatted := fixedTime().UTC().Format(TIME_FORMAT)
+	nowFormatted := fixedTime().UTC().Format(TimeFormat)
 
 	if signedDate != nowFormatted {
 		t.Errorf("Signature mismatch: %s != %s", signedDate, nowFormatted)
@@ -69,8 +69,8 @@ func TestValidator(t *testing.T) {
 	}
 
 	signer.SignRequest(req)
-	authSig := req.Header.Get(AUTHORIZATION_HEADER)
-	req.Header.Set(AUTHORIZATION_HEADER, strings.Replace(authSig, ALGORITHM_NAME, "BogusAlg", 1))
+	authSig := req.Header.Get(HeaderAuthorization)
+	req.Header.Set(HeaderAuthorization, strings.Replace(authSig, AlgorithmName, "BogusAlg", 1))
 	valid, err = signer.ValidateRequest(req)
 	if valid {
 		t.Errorf("Expected validation to fail")
@@ -78,6 +78,6 @@ func TestValidator(t *testing.T) {
 	if err != ErrInvalidSignature {
 		t.Errorf("Expected ErrInvalidSignature: %v", err)
 	}
-	req.Header.Set(AUTHORIZATION_HEADER, authSig)
+	req.Header.Set(HeaderAuthorization, authSig)
 
 }

@@ -12,13 +12,18 @@ import (
 	"time"
 )
 
+// Constants
+const (
+	LogTimeFormat       = "2006-01-02T15:04:05.000Z07:00"
+	TimeFormat          = time.RFC3339
+	HeaderAuthorization = "hsdp-api-signature"
+	HeaderSignedDate    = "SignedDate"
+	DefaultPrefix64     = "REhQV1M="
+	AlgorithmName       = "HmacSHA256"
+)
+
+// Errors
 var (
-	LOG_TIME_FORMAT      = "2006-01-02T15:04:05.000Z07:00"
-	TIME_FORMAT          = time.RFC3339
-	AUTHORIZATION_HEADER = "hsdp-api-signature"
-	SIGNED_DATE_HEADER   = "SignedDate"
-	DEFAULT_PREFIX_64    = "REhQV1M="
-	ALGORITHM_NAME       = "HmacSHA256"
 	ErrSignatureExpired  = errors.New("signture expired")
 	ErrInvalidSignature  = errors.New("invalid signature")
 	ErrInvalidCredential = errors.New("invalid credential")
@@ -33,6 +38,7 @@ type Signer struct {
 	nowFunc      NowFunc
 }
 
+// NowFunc is a time source
 type NowFunc func() time.Time
 
 // New creates an instance of Signer
@@ -48,8 +54,8 @@ func NewWithPrefixAndNowFunc(sharedKey, sharedSecret, prefix string, nowFunc Now
 		prefix:       prefix,
 	}
 	if signer.prefix == "" {
-		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(DEFAULT_PREFIX_64)))
-		l, _ := base64.StdEncoding.Decode(decoded, []byte(DEFAULT_PREFIX_64))
+		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(DefaultPrefix64)))
+		l, _ := base64.StdEncoding.Decode(decoded, []byte(DefaultPrefix64))
 		signer.prefix = string(decoded[:l])
 	}
 	if nowFunc != nil {
@@ -62,10 +68,10 @@ func NewWithPrefixAndNowFunc(sharedKey, sharedSecret, prefix string, nowFunc Now
 	return signer, nil
 }
 
-// SignsRequest signs a http.Request by
+// SignRequest signs a http.Request by
 // adding an Authorization and SignedDate header
-func (s *Signer) SignRequest(request *http.Request) error {
-	signTime := s.nowFunc().UTC().Format(TIME_FORMAT)
+func (s *Signer) SignRequest(request *http.Request, withHeaders ...string) error {
+	signTime := s.nowFunc().UTC().Format(TimeFormat)
 
 	seed1 := base64.StdEncoding.EncodeToString([]byte(signTime))
 
@@ -73,23 +79,23 @@ func (s *Signer) SignRequest(request *http.Request) error {
 
 	signature := base64.StdEncoding.EncodeToString(hashedSeed)
 
-	authorization := ALGORITHM_NAME + ";" +
+	authorization := AlgorithmName + ";" +
 		"Credential:" + s.sharedKey + ";" +
 		"SignedHeaders:SignedDate" + ";" +
 		"Signature:" + signature
 
-	request.Header.Set(AUTHORIZATION_HEADER, authorization)
-	request.Header.Set(SIGNED_DATE_HEADER, signTime)
+	request.Header.Set(HeaderAuthorization, authorization)
+	request.Header.Set(HeaderSignedDate, signTime)
 	return nil
 }
 
-// ValidateRequests validates a previously signed request
+// ValidateRequest validates a previously signed request
 func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
-	signature := request.Header.Get(AUTHORIZATION_HEADER)
-	signedDate := request.Header.Get(SIGNED_DATE_HEADER)
+	signature := request.Header.Get(HeaderAuthorization)
+	signedDate := request.Header.Get(HeaderSignedDate)
 
 	comps := strings.Split(signature, ";")
-	if len(comps) < 4 || comps[0] != ALGORITHM_NAME {
+	if len(comps) < 4 || comps[0] != AlgorithmName {
 		return false, ErrInvalidSignature
 	}
 	credential := strings.TrimPrefix(comps[1], "Credential:")
@@ -126,7 +132,7 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 	}
 
 	now := s.nowFunc()
-	signed, err := time.Parse(TIME_FORMAT, signedDate)
+	signed, err := time.Parse(TimeFormat, signedDate)
 	if err != nil || now.Sub(signed).Seconds() > 900 {
 		return false, ErrSignatureExpired
 	}
