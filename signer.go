@@ -24,10 +24,11 @@ const (
 
 // Errors
 var (
-	ErrSignatureExpired  = errors.New("signture expired")
+	ErrSignatureExpired  = errors.New("signature expired")
 	ErrInvalidSignature  = errors.New("invalid signature")
 	ErrInvalidCredential = errors.New("invalid credential")
 	ErrNotSupportedYet   = errors.New("missing implementation, please contact the author(s)")
+	ErrInvalidNowFunc    = errors.New("invalid now function")
 )
 
 // Signer holds the configuration of a signer instance
@@ -38,32 +39,55 @@ type Signer struct {
 	nowFunc      NowFunc
 }
 
+func WithNowFunc(f NowFunc) func(*Signer) error {
+	return func(s *Signer) error {
+		if f == nil {
+			return ErrInvalidNowFunc
+		}
+		s.nowFunc = f
+		return nil
+	}
+}
+
+func Prefix(prefix string) func(*Signer) error {
+	return func(s *Signer) error {
+		s.prefix = prefix
+		return nil
+	}
+}
+
 // NowFunc is a time source
 type NowFunc func() time.Time
 
-// New creates an instance of Signer
-func New(sharedKey, sharedSecret string) (*Signer, error) {
-	return NewWithPrefixAndNowFunc(sharedKey, sharedSecret, "", nil)
+
+// NewWithPrefixAndNowFunc create na instance of Signer, taking prefix and nowFunc as additional parameters
+func NewWithPrefixAndNowFunc(sharedKey, sharedSecret, prefix string, nowFunc NowFunc) (*Signer, error) {
+	return New(sharedKey, sharedSecret,
+		Prefix(prefix),
+		WithNowFunc(nowFunc))
 }
 
-// NewWithPrefixAndNowFunc create na instace of Signer, taking prefix and nowFunc as additional parameters
-func NewWithPrefixAndNowFunc(sharedKey, sharedSecret, prefix string, nowFunc NowFunc) (*Signer, error) {
+// New creates an instance of Signer
+func New(sharedKey, sharedSecret string, options ...func(*Signer)error) (*Signer, error) {
 	signer := &Signer{
 		sharedKey:    sharedKey,
 		sharedSecret: sharedSecret,
-		prefix:       prefix,
+	}
+	for _, o := range options {
+		err := o(signer)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if signer.nowFunc == nil {
+		signer.nowFunc = func() time.Time {
+			return time.Now()
+		}
 	}
 	if signer.prefix == "" {
 		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(DefaultPrefix64)))
 		l, _ := base64.StdEncoding.Decode(decoded, []byte(DefaultPrefix64))
 		signer.prefix = string(decoded[:l])
-	}
-	if nowFunc != nil {
-		signer.nowFunc = nowFunc
-	} else {
-		signer.nowFunc = func() time.Time {
-			return time.Now()
-		}
 	}
 	return signer, nil
 }
