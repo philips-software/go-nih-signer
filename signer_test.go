@@ -1,6 +1,7 @@
 package signer
 
 import (
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"strings"
 	"testing"
@@ -32,6 +33,15 @@ func TestSigner(t *testing.T) {
 	if signature != "HmacSHA256;Credential:foo;SignedHeaders:SignedDate;Signature:mws6Zf5yd8e2dhiCR0fMVyaisvLliNNqnCWpyy1am08=" {
 		t.Errorf("Invalid signture: %s", signature)
 	}
+}
+
+func TestMissingKeys(t *testing.T) {
+	signer, err := NewWithPrefixAndNowFunc("foo", "", "", fixedTime)
+	assert.Nil(t, signer)
+	assert.Equal(t, ErrMissingShareSecret, err)
+	signer, err = NewWithPrefixAndNowFunc("", "bar", "", fixedTime)
+	assert.Nil(t, signer)
+	assert.Equal(t, ErrMissingSharedKey, err)
 }
 
 func TestValidator(t *testing.T) {

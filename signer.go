@@ -24,6 +24,8 @@ const (
 
 // Errors
 var (
+	ErrMissingSharedKey  = errors.New("missing shared key")
+	ErrMissingShareSecret = errors.New("missing shared secret")
 	ErrSignatureExpired  = errors.New("signature expired")
 	ErrInvalidSignature  = errors.New("invalid signature")
 	ErrInvalidCredential = errors.New("invalid credential")
@@ -39,16 +41,18 @@ type Signer struct {
 	nowFunc      NowFunc
 }
 
-func WithNowFunc(f NowFunc) func(*Signer) error {
+// WithNowFunc uses the nowFunc as the source of time
+func WithNowFunc(nowFunc NowFunc) func(*Signer) error {
 	return func(s *Signer) error {
-		if f == nil {
+		if nowFunc == nil {
 			return ErrInvalidNowFunc
 		}
-		s.nowFunc = f
+		s.nowFunc = nowFunc
 		return nil
 	}
 }
 
+// Prefix sets the signing prefix
 func Prefix(prefix string) func(*Signer) error {
 	return func(s *Signer) error {
 		s.prefix = prefix
@@ -69,6 +73,12 @@ func NewWithPrefixAndNowFunc(sharedKey, sharedSecret, prefix string, nowFunc Now
 
 // New creates an instance of Signer
 func New(sharedKey, sharedSecret string, options ...func(*Signer)error) (*Signer, error) {
+	if sharedKey == "" {
+		return nil, ErrMissingSharedKey
+	}
+	if sharedSecret == "" {
+		return nil, ErrMissingShareSecret
+	}
 	signer := &Signer{
 		sharedKey:    sharedKey,
 		sharedSecret: sharedSecret,
