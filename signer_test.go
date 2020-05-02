@@ -89,5 +89,73 @@ func TestValidator(t *testing.T) {
 		t.Errorf("Expected ErrInvalidSignature: %v", err)
 	}
 	req.Header.Set(HeaderAuthorization, authSig)
+}
 
+func TestMultiHeaders(t *testing.T) {
+	signer, _ := New("foo", "bar",
+		WithNowFunc(fixedTime),
+		SignMethod(),
+		SignURI(),
+		SignParam())
+	req, _ := http.NewRequest("GET", "https://example.com/some/path", nil)
+
+	signer.SignRequest(req)
+
+	valid, err := signer.ValidateRequest(req)
+	if !valid {
+		t.Errorf("Validation failed: %s", err)
+	}
+}
+
+func TestWithBody(t *testing.T) {
+	signer, _ := New("foo", "bar",
+		WithNowFunc(fixedTime),
+		SignMethod(),
+		SignURI(),
+		SignParam(),
+		SignBody())
+	body := strings.NewReader("{}")
+	req, _ := http.NewRequest("GET", "https://example.com/some/path", body)
+
+	signer.SignRequest(req)
+
+	valid, err := signer.ValidateRequest(req)
+	if !valid {
+		t.Errorf("Validation failed: %s", err)
+	}
+}
+
+func TestGetSharedKey(t *testing.T) {
+	signer, _ := New("someSharedKey", "bar",
+		WithNowFunc(fixedTime),
+		SignMethod(),
+		SignURI(),
+		SignParam(),
+		SignBody())
+	body := strings.NewReader("{}")
+	req, _ := http.NewRequest("GET", "https://example.com/some/path", body)
+	signer.SignRequest(req)
+
+	sharedKey, err := GetSharedKey(req)
+	assert.Nil(t, err)
+	assert.Equal(t, "someSharedKey", sharedKey)
+}
+
+func TestWithExtraHeader(t *testing.T) {
+	extraHeader := "X-Extra-Header"
+	extraValue := "RonSwanson"
+
+	signer, _ := New("someSharedKey", "bar",
+		WithNowFunc(fixedTime))
+
+	body := strings.NewReader("{}")
+	req, _ := http.NewRequest("GET", "https://example.com/some/path", body)
+	req.Header.Set(extraHeader, extraValue)
+
+	signer.SignRequest(req, extraHeader)
+
+	valid, err := signer.ValidateRequest(req)
+	if !valid {
+		t.Errorf("Validation failed: %s", err)
+	}
 }

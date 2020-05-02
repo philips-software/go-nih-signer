@@ -3,10 +3,12 @@
 package signer
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -39,6 +41,42 @@ type Signer struct {
 	sharedSecret string
 	prefix       string
 	nowFunc      NowFunc
+	signBody     bool
+	signMethod   bool
+	signURI      bool
+	signParam    bool
+}
+
+// SignBody includes body in the signature
+func SignBody() func (*Signer) error {
+	return func (s *Signer) error {
+		s.signBody = true
+		return nil
+	}
+}
+
+// SignMethod includes body in the signature
+func SignMethod() func (*Signer) error {
+	return func (s *Signer) error {
+		s.signMethod = true
+		return nil
+	}
+}
+
+// SignURI includes body in the signature
+func SignURI() func (*Signer) error {
+	return func (s *Signer) error {
+		s.signURI = true
+		return nil
+	}
+}
+
+// SignParam includes body in the signature
+func SignParam() func (*Signer) error {
+	return func (s *Signer) error {
+		s.signParam = true
+		return nil
+	}
 }
 
 // WithNowFunc uses the nowFunc as the source of time
@@ -107,20 +145,81 @@ func New(sharedKey, sharedSecret string, options ...func(*Signer)error) (*Signer
 func (s *Signer) SignRequest(request *http.Request, withHeaders ...string) error {
 	signTime := s.nowFunc().UTC().Format(TimeFormat)
 
-	seed1 := base64.StdEncoding.EncodeToString([]byte(signTime))
+	signParts := []string{HeaderSignedDate}
 
+	if s.signParam {
+		signParts = append(signParts, "param")
+	}
+	if s.signMethod {
+		signParts = append(signParts, "method")
+	}
+	if s.signURI {
+		signParts = append(signParts, "URI")
+	}
+	if s.signBody {
+		signParts = append(signParts, "body")
+	}
+	for _, header := range withHeaders {
+		if request.Header.Get(header) != "" {
+			signParts = append(signParts, header)
+		}
+	}
+	signature, err := s.generateSignature(signTime, signParts, request)
+	if err != nil {
+		return err
+	}
+
+	signedHeaders := strings.Join(signParts, ",")
+	authorization := AlgorithmName + ";" +
+		"Credential:" + s.sharedKey + ";" +
+		"SignedHeaders:" + signedHeaders + ";" +
+		"Signature:" + signature
+
+	request.Header.Set(HeaderSignedDate, signTime)
+	request.Header.Set(HeaderAuthorization, authorization)
+	return nil
+}
+
+func (s *Signer)generateSignature(signTime string, signParts []string, request *http.Request) (string, error){
+	currentSeed := []byte("")
+	currentKey := []byte(signTime)
+	for _, h := range signParts {
+		switch h {
+		case HeaderSignedDate:
+			currentSeed = []byte(signTime)
+		case "method":
+			currentSeed = []byte(request.Method)
+		case "URI":
+			currentSeed = []byte(request.RequestURI)
+		case "param":
+			currentSeed = []byte(request.Form.Encode())
+		case "body":
+			if request.Body != nil {
+				data, err := ioutil.ReadAll(request.Body)
+				if err != nil {
+					return "", err
+				}
+				reader := ioutil.NopCloser(bytes.NewReader(data))
+				request.Body = reader
+				currentSeed = data
+			} else {
+				currentSeed = []byte("")
+			}
+		default:
+			currentSeed = []byte(request.Header.Get(h))
+		}
+		currentKey = hash(currentSeed, currentKey)
+	}
+	var seed1 string
+	if len(signParts) == 1 { // Only SignedDate
+		seed1 = base64.StdEncoding.EncodeToString([]byte(signTime))
+	} else {
+		seed1 = base64.StdEncoding.EncodeToString(currentSeed)
+	}
 	hashedSeed := hash([]byte(seed1), []byte(s.prefix+s.sharedSecret))
 
 	signature := base64.StdEncoding.EncodeToString(hashedSeed)
-
-	authorization := AlgorithmName + ";" +
-		"Credential:" + s.sharedKey + ";" +
-		"SignedHeaders:SignedDate" + ";" +
-		"Signature:" + signature
-
-	request.Header.Set(HeaderAuthorization, authorization)
-	request.Header.Set(HeaderSignedDate, signTime)
-	return nil
+	return signature, nil
 }
 
 // ValidateRequest validates a previously signed request
@@ -136,29 +235,12 @@ func (s *Signer) ValidateRequest(request *http.Request) (bool, error) {
 	if credential != s.sharedKey {
 		return false, ErrInvalidCredential
 	}
+	signParts := strings.Split(strings.TrimPrefix(comps[2], "SignedHeaders:"), ",")
 
-	headers := strings.Split(strings.TrimPrefix(comps[2], "SignedHeaders:"), ",")
-	currentSeed := []byte("")
-	currentKey := []byte("")
-	for _, h := range headers {
-		if len(currentKey) == 0 {
-			currentKey = []byte(request.Header.Get(h)) // SignedDate!
-			continue
-		}
-		switch h {
-		case "body", "method", "URI":
-			return false, ErrNotSupportedYet
-		default:
-			currentSeed = []byte(request.Header.Get(h))
-		}
-		currentKey = hash(currentSeed, currentKey)
+	signature, err := s.generateSignature(signedDate, signParts, request)
+	if err != nil {
+		return false, ErrInvalidSignature
 	}
-
-	finalHMAC := base64.StdEncoding.EncodeToString([]byte(currentKey))
-
-	hashedSeed := hash([]byte(finalHMAC), []byte(s.prefix+s.sharedSecret))
-
-	signature = base64.StdEncoding.EncodeToString(hashedSeed)
 	receivedSignature := strings.TrimPrefix(comps[3], "Signature:")
 
 	if signature != receivedSignature {
@@ -177,4 +259,16 @@ func hash(data []byte, key []byte) []byte {
 	mac := hmac.New(sha256.New, key)
 	mac.Write(data)
 	return mac.Sum(nil)
+}
+
+// GetSharedKey extracts the shared key from request
+func GetSharedKey(request *http.Request) (string, error) {
+	signature := request.Header.Get(HeaderAuthorization)
+
+	comps := strings.Split(signature, ";")
+	if len(comps) < 4 {
+		return "", ErrInvalidSignature
+	}
+	credential := strings.TrimPrefix(comps[1], "Credential:")
+	return credential, nil
 }
