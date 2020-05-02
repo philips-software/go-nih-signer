@@ -11,19 +11,32 @@ You can sign a http.Request instances
 ## Usage
 
 ```go
+package main
 
 import (
   "github.com/philips-software/go-hsdp-signer"
   "net/http"
 )
 
-func signFilter(req *http.Request, sharedKey, secretKey string) (*http.Request, error) {
+func newSigner(sharedKey, secretKey string) func(*http.Request) error {
     s, err := signer.New(sharedKey, secretKey)
     if err != nil {
-        return nil, err
+       return func(req *http.Request) error {
+          return err
+       }
     }
-    s.SignRequest(req)
-    return req, nil
+    return func(req *http.Request) error {
+	return s.SignRequest(req)
+    }	
+}
+
+func main() {
+    signRequest := newSigner("myKey", "mySecret")
+
+    req, _ := http.NewRequest("GET", "https://example.com/some/path", nil)
+    
+    signRequest(req)
+     
 }
 
 ```
