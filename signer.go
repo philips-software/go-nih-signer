@@ -168,7 +168,7 @@ func (s *Signer) SignRequest(request *http.Request, withHeaders ...string) error
 		signParts = append(signParts, "method")
 	}
 	if s.signURI {
-		signParts = append(signParts, "uri")
+		signParts = append(signParts, "URI")
 	}
 	if s.signBody {
 		signParts = append(signParts, "body")
@@ -198,7 +198,7 @@ func (s *Signer)generateSignature(signTime string, signParts []string, request *
 			continue
 		case "method":
 			currentSeed = []byte(request.Method)
-		case "uri":
+		case "URI":
 			currentSeed = []byte(request.URL.Path)
 		case "param":
 			currentSeed = []byte(request.URL.Query().Encode())
