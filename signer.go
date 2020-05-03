@@ -43,7 +43,6 @@ type Signer struct {
 	nowFunc      NowFunc
 	signBody     bool
 	signMethod   bool
-	signURI      bool
 	signParam    bool
 	signHeaders  []string
 }
@@ -60,14 +59,6 @@ func SignBody() func (*Signer) error {
 func SignMethod() func (*Signer) error {
 	return func (s *Signer) error {
 		s.signMethod = true
-		return nil
-	}
-}
-
-// SignURI includes body in the signature
-func SignURI() func (*Signer) error {
-	return func (s *Signer) error {
-		s.signURI = true
 		return nil
 	}
 }
@@ -167,9 +158,6 @@ func (s *Signer) SignRequest(request *http.Request, withHeaders ...string) error
 	if s.signMethod {
 		signParts = append(signParts, "method")
 	}
-	if s.signURI {
-		signParts = append(signParts, "URI")
-	}
 	if s.signBody {
 		signParts = append(signParts, "body")
 	}
@@ -198,8 +186,8 @@ func (s *Signer)generateSignature(signTime string, signParts []string, request *
 			continue
 		case "method":
 			currentSeed = []byte(request.Method)
-		case "URI":
-			currentSeed = []byte(request.URL.Path)
+		case "URI", "uri":
+			return "", ErrNotSupportedYet
 		case "param":
 			currentSeed = []byte(request.URL.Query().Encode())
 		case "body":

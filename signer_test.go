@@ -95,7 +95,6 @@ func TestMultiHeaders(t *testing.T) {
 	signer, _ := New("foo", "bar",
 		WithNowFunc(fixedTime),
 		SignMethod(),
-		SignURI(),
 		SignParam(),
 		SignHeaders("Api-Version"))
 	req, _ := http.NewRequest("GET", "https://example.com/some/path", nil)
@@ -108,16 +107,16 @@ func TestMultiHeaders(t *testing.T) {
 	assert.True(t, valid)
 	sig := req.Header.Get(HeaderAuthorization)
 	parts := strings.Split(sig, ";")
-	assert.Equal(t, 4, len(parts))
-	assert.Equal(t, "SignedHeaders:SignedDate,Api-Version,param,method,uri", parts[2])
-
+	if !assert.Equal(t, 4, len(parts)) {
+		return
+	}
+	assert.Equal(t, "SignedHeaders:SignedDate,Api-Version,param,method", parts[2])
 }
 
 func TestWithBody(t *testing.T) {
 	signer, _ := New("foo", "bar",
 		WithNowFunc(fixedTime),
 		SignMethod(),
-		SignURI(),
 		SignParam(),
 		SignBody())
 	body := strings.NewReader("{}")
@@ -135,7 +134,6 @@ func TestGetSharedKey(t *testing.T) {
 	signer, _ := New("someSharedKey", "bar",
 		WithNowFunc(fixedTime),
 		SignMethod(),
-		SignURI(),
 		SignParam(),
 		SignBody())
 	body := strings.NewReader("{}")
