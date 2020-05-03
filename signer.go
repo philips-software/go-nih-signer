@@ -35,16 +35,54 @@ var (
 	ErrInvalidNowFunc    = errors.New("invalid now function")
 )
 
-// Signer holds the configuration of a signer instance
-type Signer struct {
-	sharedKey    string
-	sharedSecret string
-	prefix       string
-	nowFunc      NowFunc
-	signBody     bool
-	signMethod   bool
-	signParam    bool
-	signHeaders  []string
+// New creates an instance of Signer
+func New(sharedKey, sharedSecret string, options ...func(*Signer)error) (*Signer, error) {
+	if sharedKey == "" {
+		return nil, ErrMissingSharedKey
+	}
+	if sharedSecret == "" {
+		return nil, ErrMissingShareSecret
+	}
+	signer := &Signer{
+		sharedKey:    sharedKey,
+		sharedSecret: sharedSecret,
+	}
+	for _, o := range options {
+		err := o(signer)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if signer.nowFunc == nil {
+		signer.nowFunc = func() time.Time {
+			return time.Now()
+		}
+	}
+	if signer.prefix == "" {
+		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(DefaultPrefix64)))
+		l, _ := base64.StdEncoding.Decode(decoded, []byte(DefaultPrefix64))
+		signer.prefix = string(decoded[:l])
+	}
+	return signer, nil
+}
+
+// NewWithPrefixAndNowFunc create na instance of Signer, taking prefix and nowFunc as additional parameters
+func NewWithPrefixAndNowFunc(sharedKey, sharedSecret, prefix string, nowFunc NowFunc) (*Signer, error) {
+	return New(sharedKey, sharedSecret,
+		Prefix(prefix),
+		WithNowFunc(nowFunc))
+}
+
+// GetSharedKey extracts the shared key from request
+func GetSharedKey(request *http.Request) (string, error) {
+	signature := request.Header.Get(HeaderAuthorization)
+
+	comps := strings.Split(signature, ";")
+	if len(comps) < 4 {
+		return "", ErrInvalidSignature
+	}
+	credential := strings.TrimPrefix(comps[1], "Credential:")
+	return credential, nil
 }
 
 // SignBody includes body in the signature
@@ -101,43 +139,16 @@ func Prefix(prefix string) func(*Signer) error {
 // NowFunc is a time source
 type NowFunc func() time.Time
 
-
-// NewWithPrefixAndNowFunc create na instance of Signer, taking prefix and nowFunc as additional parameters
-func NewWithPrefixAndNowFunc(sharedKey, sharedSecret, prefix string, nowFunc NowFunc) (*Signer, error) {
-	return New(sharedKey, sharedSecret,
-		Prefix(prefix),
-		WithNowFunc(nowFunc))
-}
-
-// New creates an instance of Signer
-func New(sharedKey, sharedSecret string, options ...func(*Signer)error) (*Signer, error) {
-	if sharedKey == "" {
-		return nil, ErrMissingSharedKey
-	}
-	if sharedSecret == "" {
-		return nil, ErrMissingShareSecret
-	}
-	signer := &Signer{
-		sharedKey:    sharedKey,
-		sharedSecret: sharedSecret,
-	}
-	for _, o := range options {
-		err := o(signer)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if signer.nowFunc == nil {
-		signer.nowFunc = func() time.Time {
-			return time.Now()
-		}
-	}
-	if signer.prefix == "" {
-		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(DefaultPrefix64)))
-		l, _ := base64.StdEncoding.Decode(decoded, []byte(DefaultPrefix64))
-		signer.prefix = string(decoded[:l])
-	}
-	return signer, nil
+// Signer holds the configuration of a signer instance
+type Signer struct {
+	sharedKey    string
+	sharedSecret string
+	prefix       string
+	nowFunc      NowFunc
+	signBody     bool
+	signMethod   bool
+	signParam    bool
+	signHeaders  []string
 }
 
 // SignRequest signs a http.Request by
@@ -253,14 +264,3 @@ func hash(data []byte, key []byte) []byte {
 	return mac.Sum(nil)
 }
 
-// GetSharedKey extracts the shared key from request
-func GetSharedKey(request *http.Request) (string, error) {
-	signature := request.Header.Get(HeaderAuthorization)
-
-	comps := strings.Split(signature, ";")
-	if len(comps) < 4 {
-		return "", ErrInvalidSignature
-	}
-	credential := strings.TrimPrefix(comps[1], "Credential:")
-	return credential, nil
-}
