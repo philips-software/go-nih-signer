@@ -186,7 +186,7 @@ func (s *Signer)generateSignature(signTime string, signParts []string, request *
 	for _, h := range signParts {
 		switch h {
 		case HeaderSignedDate:
-			currentSeed = []byte(signTime)
+			continue
 		case "method":
 			currentSeed = []byte(request.Method)
 		case "URI":
@@ -210,12 +210,7 @@ func (s *Signer)generateSignature(signTime string, signParts []string, request *
 		}
 		currentKey = hash(currentSeed, currentKey)
 	}
-	var seed1 string
-	if len(signParts) == 1 { // Only SignedDate
-		seed1 = base64.StdEncoding.EncodeToString([]byte(signTime))
-	} else {
-		seed1 = base64.StdEncoding.EncodeToString(currentKey)
-	}
+	seed1 := base64.StdEncoding.EncodeToString([]byte(currentKey))
 	hashedSeed := hash([]byte(seed1), []byte(s.prefix+s.sharedSecret))
 
 	signature := base64.StdEncoding.EncodeToString(hashedSeed)
