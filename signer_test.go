@@ -26,13 +26,8 @@ func TestSigner(t *testing.T) {
 	signature := req.Header.Get(HeaderAuthorization)
 
 	nowFormatted := fixedTime().UTC().Format(TimeFormat)
-
-	if signedDate != nowFormatted {
-		t.Errorf("Signature mismatch: %s != %s", signedDate, nowFormatted)
-	}
-	if signature != "HmacSHA256;Credential:foo;SignedHeaders:SignedDate;Signature:mws6Zf5yd8e2dhiCR0fMVyaisvLliNNqnCWpyy1am08=" {
-		t.Errorf("Invalid signture: %s", signature)
-	}
+	assert.Equal(t, signedDate, nowFormatted)
+	assert.Equal(t, "HmacSHA256;Credential:foo;SignedHeaders:SignedDate;Signature:mws6Zf5yd8e2dhiCR0fMVyaisvLliNNqnCWpyy1am08=", signature)
 }
 
 func TestMissingKeys(t *testing.T) {
@@ -51,44 +46,34 @@ func TestValidator(t *testing.T) {
 	signer.SignRequest(req)
 
 	valid, err := signer.ValidateRequest(req)
-	if !valid {
-		t.Errorf("Validation failed: %s", err)
-	}
+	assert.True(t, valid)
+	assert.Nil(t, err)
 
 	badSigner, _ := New("foo", "baz")
 	badSigner.SignRequest(req)
 	valid, err = signer.ValidateRequest(req)
-	if err != ErrInvalidSignature {
-		t.Errorf("Expected validation to fail: %s", err)
-	}
+	assert.False(t, valid)
+	assert.Equal(t, ErrInvalidSignature, err)
+
 	badCreds, _ := New("fooz", "bar")
 	badCreds.SignRequest(req)
 	valid, err = signer.ValidateRequest(req)
-	if err != ErrInvalidCredential {
-		t.Errorf("Expected validation to fail: %s", err)
-	}
+	assert.False(t, valid)
+	assert.Equal(t, ErrInvalidCredential, err)
+
 
 	expiredSigner, _ := NewWithPrefixAndNowFunc("foo", "bar", "", expiredTime)
 	expiredSigner.SignRequest(req)
 	valid, err = signer.ValidateRequest(req)
-	if valid {
-		t.Errorf("Expected validation to fail: %s", err)
-	}
-	if err != ErrSignatureExpired {
-		t.Errorf("Expected ErrSignatureExpired")
-	}
+	assert.False(t, valid)
+	assert.Equal(t, ErrSignatureExpired, err)
 
 	signer.SignRequest(req)
 	authSig := req.Header.Get(HeaderAuthorization)
 	req.Header.Set(HeaderAuthorization, strings.Replace(authSig, AlgorithmName, "BogusAlg", 1))
 	valid, err = signer.ValidateRequest(req)
-	if valid {
-		t.Errorf("Expected validation to fail")
-	}
-	if err != ErrInvalidSignature {
-		t.Errorf("Expected ErrInvalidSignature: %v", err)
-	}
-	req.Header.Set(HeaderAuthorization, authSig)
+	assert.Equal(t, ErrInvalidSignature, err)
+	assert.False(t, valid)
 }
 
 func TestMultiHeaders(t *testing.T) {
@@ -125,9 +110,8 @@ func TestWithBody(t *testing.T) {
 	signer.SignRequest(req)
 
 	valid, err := signer.ValidateRequest(req)
-	if !valid {
-		t.Errorf("Validation failed: %s", err)
-	}
+	assert.Nil(t, err)
+	assert.True(t, valid)
 }
 
 func TestGetSharedKey(t *testing.T) {
@@ -159,7 +143,6 @@ func TestWithExtraHeader(t *testing.T) {
 	signer.SignRequest(req, extraHeader)
 
 	valid, err := signer.ValidateRequest(req)
-	if !valid {
-		t.Errorf("Validation failed: %s", err)
-	}
+	assert.Nil(t, err)
+	assert.True(t, valid)
 }
