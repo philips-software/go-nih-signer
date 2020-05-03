@@ -214,7 +214,7 @@ func (s *Signer)generateSignature(signTime string, signParts []string, request *
 	if len(signParts) == 1 { // Only SignedDate
 		seed1 = base64.StdEncoding.EncodeToString([]byte(signTime))
 	} else {
-		seed1 = base64.StdEncoding.EncodeToString(currentSeed)
+		seed1 = base64.StdEncoding.EncodeToString(currentKey)
 	}
 	hashedSeed := hash([]byte(seed1), []byte(s.prefix+s.sharedSecret))
 
