@@ -199,9 +199,9 @@ func (s *Signer)generateSignature(signTime string, signParts []string, request *
 		case "method":
 			currentSeed = []byte(request.Method)
 		case "uri":
-			currentSeed = []byte(request.RequestURI)
+			currentSeed = []byte(request.URL.Path)
 		case "param":
-			currentSeed = []byte(request.Form.Encode())
+			currentSeed = []byte(request.URL.Query().Encode())
 		case "body":
 			if request.Body != nil {
 				data, err := ioutil.ReadAll(request.Body)
