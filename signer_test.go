@@ -96,15 +96,21 @@ func TestMultiHeaders(t *testing.T) {
 		WithNowFunc(fixedTime),
 		SignMethod(),
 		SignURI(),
-		SignParam())
+		SignParam(),
+		SignHeaders("Api-Version"))
 	req, _ := http.NewRequest("GET", "https://example.com/some/path", nil)
+	req.Header.Add("Api-Version", "1")
 
 	signer.SignRequest(req)
 
 	valid, err := signer.ValidateRequest(req)
-	if !valid {
-		t.Errorf("Validation failed: %s", err)
-	}
+	assert.Nil(t, err)
+	assert.True(t, valid)
+	sig := req.Header.Get(HeaderAuthorization)
+	parts := strings.Split(sig, ";")
+	assert.Equal(t, 4, len(parts))
+	assert.Equal(t, "SignedHeaders:SignedDate,Api-Version,param,method,uri", parts[2])
+
 }
 
 func TestWithBody(t *testing.T) {

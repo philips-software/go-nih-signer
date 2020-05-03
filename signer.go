@@ -45,6 +45,7 @@ type Signer struct {
 	signMethod   bool
 	signURI      bool
 	signParam    bool
+	signHeaders  []string
 }
 
 // SignBody includes body in the signature
@@ -75,6 +76,14 @@ func SignURI() func (*Signer) error {
 func SignParam() func (*Signer) error {
 	return func (s *Signer) error {
 		s.signParam = true
+		return nil
+	}
+}
+
+// SignHeaders includes the headers if present
+func SignHeaders(headers... string) func(*Signer) error {
+	return func (s *Signer) error {
+		s.signHeaders = headers
 		return nil
 	}
 }
@@ -146,7 +155,12 @@ func (s *Signer) SignRequest(request *http.Request, withHeaders ...string) error
 	signTime := s.nowFunc().UTC().Format(TimeFormat)
 
 	signParts := []string{HeaderSignedDate}
-
+	signHeaders := append(withHeaders, s.signHeaders...)
+	for _, header := range signHeaders {
+		if request.Header.Get(header) != "" {
+			signParts = append(signParts, header)
+		}
+	}
 	if s.signParam {
 		signParts = append(signParts, "param")
 	}
@@ -158,11 +172,6 @@ func (s *Signer) SignRequest(request *http.Request, withHeaders ...string) error
 	}
 	if s.signBody {
 		signParts = append(signParts, "body")
-	}
-	for _, header := range withHeaders {
-		if request.Header.Get(header) != "" {
-			signParts = append(signParts, header)
-		}
 	}
 	signature, err := s.generateSignature(signTime, signParts, request)
 	if err != nil {
