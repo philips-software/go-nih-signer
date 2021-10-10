@@ -1,6 +1,5 @@
 [![Build Status](https://travis-ci.com/philips-software/go-hsdp-signer.svg?branch=master)](https://travis-ci.com/philips-software/go-hsdp-signer)
-[![Maintainability](https://api.codeclimate.com/v1/badges/d30d55adc190015a63a6/maintainability)](https://codeclimate.com/github/philips-software/go-hsdp-signer/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/d30d55adc190015a63a6/test_coverage)](https://codeclimate.com/github/philips-software/go-hsdp-signer/test_coverage)
+[![Go Reference](https://pkg.go.dev/badge/github.com/philips-software/go-hsdp-signer.svg)](https://pkg.go.dev/github.com/philips-software/go-hsdp-signer)
 
 # Go HSDP Signer
 
