@@ -5,7 +5,7 @@
 # Go HSDP Signer
 
 This package implements the HSDP API signing algorithm.
-You can sign a http.Request instances 
+You can sign a http.Request instance 
 
 ## Usage
 
