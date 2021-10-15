@@ -1,11 +1,12 @@
 package signer
 
 import (
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func fixedTime() time.Time {
@@ -20,7 +21,10 @@ func TestSigner(t *testing.T) {
 	signer, _ := NewWithPrefixAndNowFunc("foo", "bar", "", fixedTime)
 	req, _ := http.NewRequest("GET", "https://example.com/path", nil)
 
-	signer.SignRequest(req)
+	err := signer.SignRequest(req)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	signedDate := req.Header.Get(HeaderSignedDate)
 	signature := req.Header.Get(HeaderAuthorization)
@@ -61,14 +65,16 @@ func TestValidator(t *testing.T) {
 	assert.False(t, valid)
 	assert.Equal(t, ErrInvalidCredential, err)
 
-
 	expiredSigner, _ := NewWithPrefixAndNowFunc("foo", "bar", "", expiredTime)
 	expiredSigner.SignRequest(req)
 	valid, err = signer.ValidateRequest(req)
 	assert.False(t, valid)
 	assert.Equal(t, ErrSignatureExpired, err)
 
-	signer.SignRequest(req)
+	err = signer.SignRequest(req)
+	if !assert.Nil(t, err) {
+		return
+	}
 	authSig := req.Header.Get(HeaderAuthorization)
 	req.Header.Set(HeaderAuthorization, strings.Replace(authSig, AlgorithmName, "BogusAlg", 1))
 	valid, err = signer.ValidateRequest(req)
@@ -85,10 +91,15 @@ func TestMultiHeaders(t *testing.T) {
 	req, _ := http.NewRequest("GET", "https://example.com/some/path", nil)
 	req.Header.Add("Api-Version", "1")
 
-	signer.SignRequest(req)
+	err := signer.SignRequest(req)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	valid, err := signer.ValidateRequest(req)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 	assert.True(t, valid)
 	sig := req.Header.Get(HeaderAuthorization)
 	parts := strings.Split(sig, ";")
@@ -107,7 +118,10 @@ func TestWithBody(t *testing.T) {
 	body := strings.NewReader("{}")
 	req, _ := http.NewRequest("GET", "https://example.com/some/path", body)
 
-	signer.SignRequest(req)
+	err := signer.SignRequest(req)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	valid, err := signer.ValidateRequest(req)
 	assert.Nil(t, err)
@@ -140,9 +154,22 @@ func TestWithExtraHeader(t *testing.T) {
 	req, _ := http.NewRequest("GET", "https://example.com/some/path", body)
 	req.Header.Set(extraHeader, extraValue)
 
-	signer.SignRequest(req, extraHeader)
+	err := signer.SignRequest(req, extraHeader)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	valid, err := signer.ValidateRequest(req)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+
+	testReq, _ := http.NewRequest(req.Method, "https://foo", nil)
+	testReq.Header.Set(HeaderAuthorization, req.Header.Get(HeaderAuthorization))
+	testReq.Header.Set(HeaderSignedDate, req.Header.Get(HeaderSignedDate))
+	testReq.Header.Set(extraHeader, extraValue)
+
+
+	valid, err = signer.ValidateRequest(testReq)
 	assert.Nil(t, err)
 	assert.True(t, valid)
 }
