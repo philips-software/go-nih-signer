@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.com/philips-software/go-hsdp-signer.svg?branch=master)](https://travis-ci.com/philips-software/go-hsdp-signer)
-[![Go Reference](https://pkg.go.dev/badge/github.com/philips-software/go-hsdp-signer.svg)](https://pkg.go.dev/github.com/philips-software/go-hsdp-signer)
+[![Build Status](https://travis-ci.com/philips-software/go-nih-signer.svg?branch=master)](https://travis-ci.com/philips-software/go-nih-signer)
+[![Go Reference](https://pkg.go.dev/badge/github.com/philips-software/go-nih-signer.svg)](https://pkg.go.dev/github.com/philips-software/go-nih-signer)
 
 # Go NIH Signer
 

@@ -1,4 +1,4 @@
-module github.com/philips-software/go-hsdp-signer
+module github.com/philips-software/go-nih-signer
 
 go 1.14
 

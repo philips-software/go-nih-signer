@@ -18,7 +18,7 @@ import (
 const (
 	LogTimeFormat       = "2006-01-02T15:04:05.000Z07:00"
 	TimeFormat          = time.RFC3339
-	HeaderAuthorization = "hsdp-api-signature"
+	HeaderAuthorization = "hsdp-api-signature" // Disclaimer: even though hsdp is mentioned here, I&S Cloud Operations is not the responsible party. This string value is used for historical reasons so as to not break existing software
 	HeaderSignedDate    = "SignedDate"
 	DefaultPrefix64     = "REhQV1M="
 	AlgorithmName       = "HmacSHA256"
