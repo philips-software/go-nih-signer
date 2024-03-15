@@ -1,9 +1,9 @@
 [![Build Status](https://travis-ci.com/philips-software/go-hsdp-signer.svg?branch=master)](https://travis-ci.com/philips-software/go-hsdp-signer)
 [![Go Reference](https://pkg.go.dev/badge/github.com/philips-software/go-hsdp-signer.svg)](https://pkg.go.dev/github.com/philips-software/go-hsdp-signer)
 
-# Go HSDP Signer
+# Go NIH Signer
 
-This package implements the HSDP API signing algorithm.
+This package implements the NIH API signing algorithm.
 You can sign a http.Request instance 
 
 ## Usage
@@ -12,7 +12,7 @@ You can sign a http.Request instance
 package main
 
 import (
-  "github.com/philips-software/go-hsdp-signer"
+  "github.com/philips-software/go-nih-signer"
   "net/http"
 )
 
