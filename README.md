@@ -3,7 +3,7 @@
 
 # Go NIH Signer
 
-This package implements the NIH (formerly HSDP) API signing algorithm.
+This package implements the API signing algorithm used in various HSP APIs.
 You can sign a http.Request instance 
 
 ## Usage
