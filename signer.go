@@ -1,5 +1,5 @@
-//Package signer provides an implementation of the HSDP API signing
-//algorithm. It can sign standard Go http.Request
+// Package signer provides an implementation of the HSDP API signing
+// algorithm. It can sign standard Go http.Request
 package signer
 
 import (
@@ -26,17 +26,17 @@ const (
 
 // Errors
 var (
-	ErrMissingSharedKey  = errors.New("missing shared key")
+	ErrMissingSharedKey   = errors.New("missing shared key")
 	ErrMissingShareSecret = errors.New("missing shared secret")
-	ErrSignatureExpired  = errors.New("signature expired")
-	ErrInvalidSignature  = errors.New("invalid signature")
-	ErrInvalidCredential = errors.New("invalid credential")
-	ErrNotSupportedYet   = errors.New("missing implementation, please contact the author(s)")
-	ErrInvalidNowFunc    = errors.New("invalid now function")
+	ErrSignatureExpired   = errors.New("signature expired")
+	ErrInvalidSignature   = errors.New("invalid signature")
+	ErrInvalidCredential  = errors.New("invalid credential")
+	ErrNotSupportedYet    = errors.New("missing implementation, please contact the author(s)")
+	ErrInvalidNowFunc     = errors.New("invalid now function")
 )
 
 // New creates an instance of Signer
-func New(sharedKey, sharedSecret string, options ...func(*Signer)error) (*Signer, error) {
+func New(sharedKey, sharedSecret string, options ...func(*Signer) error) (*Signer, error) {
 	if sharedKey == "" {
 		return nil, ErrMissingSharedKey
 	}
@@ -67,10 +67,9 @@ func New(sharedKey, sharedSecret string, options ...func(*Signer)error) (*Signer
 }
 
 // NewWithPrefixAndNowFunc create na instance of Signer, taking prefix and nowFunc as additional parameters
-func NewWithPrefixAndNowFunc(sharedKey, sharedSecret, prefix string, nowFunc NowFunc) (*Signer, error) {
-	return New(sharedKey, sharedSecret,
-		Prefix(prefix),
-		WithNowFunc(nowFunc))
+func NewWithPrefixAndNowFunc(sharedKey, sharedSecret, prefix string, nowFunc NowFunc, options ...func(*Signer) error) (*Signer, error) {
+	opts := append(options, Prefix(prefix), WithNowFunc(nowFunc))
+	return New(sharedKey, sharedSecret, opts...)
 }
 
 // GetSharedKey extracts the shared key from request
@@ -86,32 +85,32 @@ func GetSharedKey(request *http.Request) (string, error) {
 }
 
 // SignBody includes body in the signature
-func SignBody() func (*Signer) error {
-	return func (s *Signer) error {
+func SignBody() func(*Signer) error {
+	return func(s *Signer) error {
 		s.signBody = true
 		return nil
 	}
 }
 
 // SignMethod includes body in the signature
-func SignMethod() func (*Signer) error {
-	return func (s *Signer) error {
+func SignMethod() func(*Signer) error {
+	return func(s *Signer) error {
 		s.signMethod = true
 		return nil
 	}
 }
 
 // SignParam includes body in the signature
-func SignParam() func (*Signer) error {
-	return func (s *Signer) error {
+func SignParam() func(*Signer) error {
+	return func(s *Signer) error {
 		s.signParam = true
 		return nil
 	}
 }
 
 // SignHeaders includes the headers if present
-func SignHeaders(headers... string) func(*Signer) error {
-	return func (s *Signer) error {
+func SignHeaders(headers ...string) func(*Signer) error {
+	return func(s *Signer) error {
 		s.signHeaders = headers
 		return nil
 	}
@@ -188,7 +187,7 @@ func (s *Signer) SignRequest(request *http.Request, withHeaders ...string) error
 	return nil
 }
 
-func (s *Signer)generateSignature(signTime string, signParts []string, request *http.Request) (string, error){
+func (s *Signer) generateSignature(signTime string, signParts []string, request *http.Request) (string, error) {
 	currentSeed := []byte("")
 	currentKey := []byte(signTime)
 	for _, h := range signParts {
@@ -263,4 +262,3 @@ func hash(data []byte, key []byte) []byte {
 	mac.Write(data)
 	return mac.Sum(nil)
 }
-

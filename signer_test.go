@@ -34,6 +34,25 @@ func TestSigner(t *testing.T) {
 	assert.Equal(t, "HmacSHA256;Credential:foo;SignedHeaders:SignedDate;Signature:mws6Zf5yd8e2dhiCR0fMVyaisvLliNNqnCWpyy1am08=", signature)
 }
 
+func TestSignerWithHeaders(t *testing.T) {
+	signer, _ := NewWithPrefixAndNowFunc("foo", "bar", "", fixedTime, SignHeaders("X-Extra-Header"))
+	req, _ := http.NewRequest("GET", "https://example.com/path", nil)
+
+	req.Header.Add("X-Extra-Header", "RonSwanson")
+
+	err := signer.SignRequest(req)
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	signedDate := req.Header.Get(HeaderSignedDate)
+	signature := req.Header.Get(HeaderAuthorization)
+
+	nowFormatted := fixedTime().UTC().Format(TimeFormat)
+	assert.Equal(t, signedDate, nowFormatted)
+	assert.Equal(t, "HmacSHA256;Credential:foo;SignedHeaders:SignedDate,X-Extra-Header;Signature:PzvhPpR98P2rcfWY3Cg8FzcPJdnqkOuy8xMQ+YeBViM=", signature)
+}
+
 func TestMissingKeys(t *testing.T) {
 	signer, err := NewWithPrefixAndNowFunc("foo", "", "", fixedTime)
 	assert.Nil(t, signer)
@@ -167,7 +186,6 @@ func TestWithExtraHeader(t *testing.T) {
 	testReq.Header.Set(HeaderAuthorization, req.Header.Get(HeaderAuthorization))
 	testReq.Header.Set(HeaderSignedDate, req.Header.Get(HeaderSignedDate))
 	testReq.Header.Set(extraHeader, extraValue)
-
 
 	valid, err = signer.ValidateRequest(testReq)
 	assert.Nil(t, err)
