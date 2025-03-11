@@ -1,4 +1,4 @@
-[![Go Reference](https://pkg.go.dev/badge/github.com/philips-software/go-nih-signer.svg)](https://pkg.go.dev/github.com/philips-software/go-nih-signer)
+# DEPRECATED: please use https://github.com/dip-software/go-dip-signer
 
 # Go NIH Signer
 
