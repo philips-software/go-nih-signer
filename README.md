@@ -1,5 +1,3 @@
-# DEPRECATED: please use https://github.com/dip-software/go-dip-signer
-
 # Go NIH Signer
 
 This package implements the API signing algorithm used in various HSP APIs.
